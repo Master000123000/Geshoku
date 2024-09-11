@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"net"
+	"os"
 )
 
 func write_welcome() {
@@ -17,13 +19,14 @@ func handle_client(conn net.Conn) {
 	buffer := make([]byte, 1024)
 	fmt.Println("[Info] Client connected:", conn.RemoteAddr())
 	fmt.Println("[Info] Waiting for commands to send to the client")
-	var command string
+	//var command string
 	for {
 		for i := range buffer {
 			buffer[i] = 0
 		}
 		fmt.Print("Shell> ")
-		_, err := fmt.Scanln(&command)
+		in := bufio.NewReader(os.Stdin)
+		command, err := in.ReadString('\n')
 		if err != nil {
 			fmt.Println("[Err] Failed to read command:", err)
 			continue
@@ -37,12 +40,17 @@ func handle_client(conn net.Conn) {
 			fmt.Println("[Err] Failed to send command to client:", err)
 			break
 		}
+		fmt.Println("Reading data")
 		_, err = conn.Read(buffer)
 		if err != nil {
 			fmt.Println("[Err] Failed to receive response from client:", err)
 			break
 		}
-		fmt.Println(string(buffer[:]))
+		println("data received")
+		response := string(buffer[:])
+		if response != "" {
+			fmt.Println(string(buffer[:]))
+		}
 	}
 }
 
@@ -68,4 +76,3 @@ func main() {
 	write_welcome()
 	start_server()
 }
-

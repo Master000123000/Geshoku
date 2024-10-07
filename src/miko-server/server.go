@@ -38,7 +38,6 @@ func handle_client(conn net.Conn) {
 
 	fmt.Printf("\n[Info] New agent connected: %s\n", agentID)
 	for {
-		//buffer = buffer[:0]
 		_, err := conn.Read(buffer)
 		if err != nil {
 			fmt.Println("[Info] Agent disconnected")

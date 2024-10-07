@@ -70,8 +70,9 @@ void handle_client(int client_socket) {
 }
 
 void start_server() {
+  int sockd =-1;
   printf("[Info] Starting HTTP server...\n");
-  int sockd=socket(AF_INET,SOCK_STREAM,0);
+  sockd=socket(AF_INET,SOCK_STREAM,0);
   int client_socket;
   if(sockd<0){
     perror("[Err] Failed socket creation");

